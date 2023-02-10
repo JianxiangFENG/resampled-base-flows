@@ -1,6 +1,7 @@
 # Resampling Base Distributions of Normalizing Flows
 
 ## New branch for customized editions for flowDet
+## New branch for customized editions for flowDet
 
 ## Overview
 
