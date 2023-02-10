@@ -1,5 +1,7 @@
 # Resampling Base Distributions of Normalizing Flows
 
+## New branch for customized editions
+
 ## Overview
 
 Normalizing flows are a popular class of models for approximating probability 
