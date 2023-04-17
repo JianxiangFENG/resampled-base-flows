@@ -32,6 +32,29 @@ class NormalizingFlow(nf.NormalizingFlow):
         """
         super().__init__(q0, flows, p)
 
+    def forward_kld(self, x, y=None):
+        """override with cls conditional information
+
+        Args:
+          x: Batch sampled from target distribution
+          y: cls label in one-hot format
+
+        Returns:
+          Estimate of forward KL divergence averaged over batch
+        """
+        log_q = torch.zeros(len(x), device=x.device)
+        z = x
+        for i in range(len(self.flows) - 1, -1, -1):
+            z, log_det = self.flows[i].inverse(z)
+            log_q += log_det
+
+        if y is not None:
+            log_q += self.q0.log_prob(z, y)
+        else:
+            log_q += self.q0.log_prob(z)
+        return -torch.mean(log_q)
+
+
     def reverse_kld_cov(self, num_samples=1, beta=1.):
         """
         Estimates reverse KL divergence, gradients through covariance
