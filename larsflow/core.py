@@ -53,6 +53,31 @@ class NormalizingFlow(nf.NormalizingFlow):
         else:
             log_q += self.q0.log_prob(z)
         return -torch.mean(log_q)
+    
+
+    def IB_loss(self, x, y, beta, sigma):
+        """override with cls conditional information
+
+        Args:
+          x: Batch sampled from target distribution
+          y: cls label in one-hot format
+
+        Returns:
+          Estimate of forward KL divergence averaged over batch
+        """
+        log_q = torch.zeros(len(x), device=x.device)
+        z = x + torch.randn_like(x, device=x.device) * sigma
+        for i in range(len(self.flows) - 1, -1, -1):
+            z, log_det = self.flows[i].inverse(z)
+            log_q += log_det
+            
+        log_pxy, log_px = self.q0.log_prob(z, y, return_uncond_logp=True)
+        log_q += log_px
+        beta_nll = 1. / (1 + beta)
+        beta_cls = 1. * beta / (1 + beta)
+        IB_loss = -beta_nll*log_q - beta_cls*log_pxy
+        # print(f"In larsflow core, log_q: {beta_nll*torch.mean(log_q):.4f}, log_pxy: {beta_cls*torch.mean(log_pxy):.4f}")
+        return torch.mean(IB_loss)
 
 
     def reverse_kld_cov(self, num_samples=1, beta=1.):
