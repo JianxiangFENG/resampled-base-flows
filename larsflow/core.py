@@ -49,9 +49,9 @@ class NormalizingFlow(nf.NormalizingFlow):
             log_q += log_det
 
         if y is not None:
-            log_q += self.q0.log_prob(z, y)
+            log_q += self.q0.log_prob(z, y) / self.q0.dim
         else:
-            log_q += self.q0.log_prob(z)
+            log_q += self.q0.log_prob(z) / self.q0.dim
         return -torch.mean(log_q)
     
 
@@ -73,6 +73,7 @@ class NormalizingFlow(nf.NormalizingFlow):
             
         log_pxy, log_px = self.q0.log_prob(z, y, return_uncond_logp=True)
         log_q += log_px
+        log_q /= self.q0.dim
         beta_nll = 1. / (1 + beta)
         beta_cls = 1. * beta / (1 + beta)
         IB_loss = -beta_nll*log_q - beta_cls*log_pxy
