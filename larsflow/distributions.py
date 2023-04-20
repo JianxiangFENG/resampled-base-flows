@@ -20,27 +20,27 @@ class ResampledGaussian(nf.distributions.BaseDistribution):
         :param bs_factor: Factor to increase the batch size during sampling
         """
         super().__init__()
-        self.d = d
+        self.dim = d
         self.a = a
         self.T = T
         self.eps = eps
         self.bs_factor = bs_factor
         self.register_buffer("Z", torch.tensor(-1.))
         if trainable:
-            self.loc = nn.Parameter(torch.zeros(1, self.d))
-            self.log_scale = nn.Parameter(torch.zeros(1, self.d))
+            self.loc = nn.Parameter(torch.zeros(1, self.dim))
+            self.log_scale = nn.Parameter(torch.zeros(1, self.dim))
         else:
-            self.register_buffer("loc", torch.zeros(1, self.d))
-            self.register_buffer("log_scale", torch.zeros(1, self.d))
+            self.register_buffer("loc", torch.zeros(1, self.dim))
+            self.register_buffer("log_scale", torch.zeros(1, self.dim))
 
     def forward(self, num_samples=1):
         t = 0
-        eps = torch.zeros(num_samples, self.d, dtype=self.loc.dtype, device=self.loc.device)
+        eps = torch.zeros(num_samples, self.dim, dtype=self.loc.dtype, device=self.loc.device)
         s = 0
         n = 0
         Z_sum = 0
         for i in range(self.T // self.bs_factor + 1):
-            eps_ = torch.randn((num_samples * self.bs_factor, self.d),
+            eps_ = torch.randn((num_samples * self.bs_factor, self.dim),
                                dtype=self.loc.dtype, device=self.loc.device)
             acc = self.a(eps_)
             if self.training or self.Z < 0.:
@@ -59,12 +59,12 @@ class ResampledGaussian(nf.distributions.BaseDistribution):
             if s == num_samples:
                 break
         z = self.loc + torch.exp(self.log_scale) * eps
-        log_p_gauss = - 0.5 * self.d * np.log(2 * np.pi) \
+        log_p_gauss = - 0.5 * self.dim * np.log(2 * np.pi) \
                       - torch.sum(self.log_scale, 1)\
                       - torch.sum(0.5 * torch.pow(eps, 2), 1)
         acc = self.a(eps)
         if self.training or self.Z < 0.:
-            eps_ = torch.randn((num_samples, self.d), dtype=self.loc.dtype, device=self.loc.device)
+            eps_ = torch.randn((num_samples, self.dim), dtype=self.loc.dtype, device=self.loc.device)
             Z_batch = torch.mean(self.a(eps_))
             Z_ = (Z_sum + Z_batch.detach() * num_samples) / (n + num_samples)
             if self.Z < 0.:
@@ -80,7 +80,7 @@ class ResampledGaussian(nf.distributions.BaseDistribution):
 
     def log_prob(self, z):
         eps = (z - self.loc) / torch.exp(self.log_scale)
-        log_p_gauss = - 0.5 * self.d * np.log(2 * np.pi) \
+        log_p_gauss = - 0.5 * self.dim * np.log(2 * np.pi) \
                       - torch.sum(self.log_scale, 1) \
                       - torch.sum(0.5 * torch.pow(eps, 2), 1)
         acc = self.a(eps)
@@ -110,7 +110,7 @@ class ResampledGaussian(nf.distributions.BaseDistribution):
             dtype = self.Z.dtype
             device = self.Z.device
             for i in range(num_batches):
-                eps = torch.randn((num_samples, self.d), dtype=dtype,
+                eps = torch.randn((num_samples, self.dim), dtype=dtype,
                                   device=device)
                 acc_ = self.a(eps)
                 Z_batch = torch.mean(acc_)
