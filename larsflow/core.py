@@ -32,6 +32,23 @@ class NormalizingFlow(nf.NormalizingFlow):
         """
         super().__init__(q0, flows, p)
 
+    def log_prob(self, x):
+        """Get log probability for batch
+
+        Args:
+          x: Batch
+
+        Returns:
+          log probability
+        """
+        log_q = torch.zeros(len(x), dtype=x.dtype, device=x.device)
+        z = x
+        for i in range(len(self.flows) - 1, -1, -1):
+            z, log_det = self.flows[i].inverse(z)
+            log_q += log_det
+        log_q += self.q0.log_prob(z)
+        return log_q
+
     def forward_kld(self, x, y=None):
         """override with cls conditional information
 
@@ -49,13 +66,13 @@ class NormalizingFlow(nf.NormalizingFlow):
             log_q += log_det
 
         if y is not None:
-            log_q += self.q0.log_prob(z, y) / self.q0.dim
+            log_q += self.q0.log_prob(z, y)
         else:
-            log_q += self.q0.log_prob(z) / self.q0.dim
+            log_q += self.q0.log_prob(z)
         return -torch.mean(log_q)
     
 
-    def IB_loss(self, x, y, beta, sigma):
+    def IB_loss(self, x, y, sigma):
         """override with cls conditional information
 
         Args:
@@ -73,12 +90,8 @@ class NormalizingFlow(nf.NormalizingFlow):
             
         log_pxy, log_px = self.q0.log_prob(z, y, return_uncond_logp=True)
         log_q += log_px
-        log_q /= self.q0.dim
-        beta_nll = 1. / (1 + beta)
-        beta_cls = 1. * beta / (1 + beta)
-        IB_loss = -beta_nll*log_q - beta_cls*log_pxy
         # print(f"In larsflow core, log_q: {beta_nll*torch.mean(log_q):.4f}, log_pxy: {beta_cls*torch.mean(log_pxy):.4f}")
-        return torch.mean(IB_loss)
+        return log_q, log_pxy 
 
 
     def reverse_kld_cov(self, num_samples=1, beta=1.):
