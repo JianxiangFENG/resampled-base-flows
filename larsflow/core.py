@@ -32,7 +32,25 @@ class NormalizingFlow(nf.NormalizingFlow):
         """
         super().__init__(q0, flows, p)
 
-    def log_prob(self, x):
+    # def log_prob(self, x):
+    #     """Get log probability for batch
+
+    #     Args:
+    #       x: Batch
+
+    #     Returns:
+    #       log probability
+    #     """
+    #     log_q = torch.zeros(1, dtype=x.dtype, device=x.device)
+    #     z = x
+    #     for i in range(len(self.flows) - 1, -1, -1):
+    #         z, log_det = self.flows[i].inverse(z)
+    #         log_q += log_det
+    #     log_q0 = self.q0.log_prob(z)
+    #     log_q += log_q0
+    #     return log_q
+
+    def log_prob(self, x, return_z=False):
         """Get log probability for batch
 
         Args:
@@ -46,8 +64,12 @@ class NormalizingFlow(nf.NormalizingFlow):
         for i in range(len(self.flows) - 1, -1, -1):
             z, log_det = self.flows[i].inverse(z)
             log_q += log_det
-        log_q += self.q0.log_prob(z)
-        return log_q
+        log_q0 = self.q0.log_prob(z)
+        log_q += log_q0
+        if return_z:
+            return log_q, z, log_q0
+        else:
+            return log_q
 
     def forward_kld(self, x, y=None):
         """override with cls conditional information
